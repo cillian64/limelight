@@ -1,0 +1,13 @@
+[package]
+name = "dmg1083-software-rp235x"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rp235x-hal = {version = "0.2.0", features = ["binary-info", "critical-section-impl", "rt", "defmt"]}
+embedded-hal = "0.2"
+cortex-m = "0.7"
+
+dmg1083 = { path = "../eta/dmg1083" }
+mbi5153 = { path = "../eta/mbi5153" }
+misc-hacks = { path = "../eta/misc-hacks" }
