@@ -6,6 +6,8 @@ use panic_halt as _;
 
 use rp235x_hal as hal;
 
+use defmt_rtt as _;
+
 use embedded_hal::delay::DelayNs;
 use embedded_hal::digital::OutputPin;
 
@@ -35,6 +37,8 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 #[hal::entry]
 fn main() -> ! {
+    defmt::info!("Hello, world");
+
     let mut pac = hal::pac::Peripherals::take().unwrap();
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
     let clocks = hal::clocks::init_clocks_and_plls(
@@ -63,16 +67,9 @@ fn main() -> ! {
 
     let mut led1_pin = pins.gpio26.into_push_pull_output();
     let mut led2_pin = pins.gpio0.into_push_pull_output();
+    let mut wiggle = false;
     led1_pin.set_high().unwrap();
 
-//    loop {
-//        led1_pin.set_high().unwrap();
-//        led2_pin.set_low().unwrap();
-//        timer.delay_ms(500);
-//        led1_pin.set_low().unwrap();
-//        led2_pin.set_high().unwrap();
-//        timer.delay_ms(500);
-//    }
 
     // Address lines
     let addr_a = pins.gpio2.into_push_pull_output().into_dyn_pin();
@@ -127,6 +124,7 @@ fn main() -> ! {
         ..Default::default()
     };
 
+    defmt::info!("Setting configure1");
     dmg1083::configure_panel(
         config,
         PinRef(&mut dclk),
@@ -135,6 +133,7 @@ fn main() -> ! {
     )
     .unwrap();
 
+    defmt::info!("Setting configure2");
     dmg1083::configure_panel_2(
         PinRef(&mut dclk),
         PinRef(&mut latch),
@@ -162,6 +161,7 @@ fn main() -> ! {
     )
     .unwrap();
 
+    defmt::info!("Initialising software driver");
     let mut app = Dmg1083::new(
         dclk,
         gclk,
@@ -177,26 +177,43 @@ fn main() -> ! {
         config.gclk_multiplier,
     );
 
+    defmt::info!("Finished all setup.");
+
     // SENDING DATA
     let mut panel: PanelData;
 
-    let fill = PrimitiveStyle::with_fill(Rgb888::BLUE);
+    let fill_red = PrimitiveStyle::with_fill(Rgb888::RED);
+    let fill_green = PrimitiveStyle::with_fill(Rgb888::GREEN);
+    let fill_blue = PrimitiveStyle::with_fill(Rgb888::BLUE);
 
     loop {
+        if wiggle {
+            led1_pin.set_high().unwrap();
+            led2_pin.set_low().unwrap();
+        } else {
+            led1_pin.set_low().unwrap();
+            led2_pin.set_high().unwrap();
+        }
+        wiggle = !wiggle;
+
+
         panel = PanelData::default();
 
-        Rectangle::new(Point::new(10, 10), Size::new(6, 6))
-            .into_styled(fill)
+        Rectangle::new(Point::new(10, 10), Size::new(20, 20))
+            .into_styled(fill_red)
             .draw(&mut panel)
             .unwrap();
 
-        Circle::new(Point::new(40, 40), 5)
-            .into_styled(fill)
+        Circle::new(Point::new(40, 40), 20)
+            .into_styled(fill_blue)
             .draw(&mut panel)
             .unwrap();
 
+        defmt::info!("Sending frame");
         app.transmit_frame(&panel);
         app.vsync();
+
+        timer.delay_ms(3000);
     }
 
 }
