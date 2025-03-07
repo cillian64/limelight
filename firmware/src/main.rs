@@ -186,6 +186,11 @@ fn main() -> ! {
     let fill_green = PrimitiveStyle::with_fill(Rgb888::GREEN);
     let fill_blue = PrimitiveStyle::with_fill(Rgb888::BLUE);
 
+    let mut x = 10;
+    let mut y = 30;
+    let mut xv = 1;
+    let mut yv = 2;
+
     loop {
         if wiggle {
             led1_pin.set_high().unwrap();
@@ -196,24 +201,34 @@ fn main() -> ! {
         }
         wiggle = !wiggle;
 
+        // "physics"
+        x += xv;
+        y += yv;
+        if x < 5 || x > 73 {
+            xv = -xv;
+        }
+        if y < 5 || y > 73 {
+            yv = -yv;
+        }
+        x = i32::max(i32::min(x, 73), 5);
+        y = i32::max(i32::min(y, 73), 5);
+
+        // defmt::info!("x={} y={} xv={} yv={}", x, y, xv, yv);
 
         panel = PanelData::default();
 
-        Rectangle::new(Point::new(10, 10), Size::new(20, 20))
+        Rectangle::new(Point::new(30, 30), Size::new(20, 20))
             .into_styled(fill_red)
             .draw(&mut panel)
             .unwrap();
 
-        Circle::new(Point::new(40, 40), 20)
+        Circle::new(Point::new(x - 3, y - 5), 10)
             .into_styled(fill_blue)
             .draw(&mut panel)
             .unwrap();
 
-        defmt::info!("Sending frame");
         app.transmit_frame(&panel);
         app.vsync();
-
-        timer.delay_ms(3000);
     }
 
 }
