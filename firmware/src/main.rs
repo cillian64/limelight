@@ -12,7 +12,7 @@ use embedded_hal::digital::OutputPin;
 use dmg1083::{PanelData, SCAN_LINES};
 use dmg1083_software_rp235x::Dmg1083;
 use mbi5153::{Mbi5153Config, Mbi5153Config2};
-use misc_hacks::{InvertedPin, PinGroup, PinRef};
+use misc_hacks::{PinGroup, PinRef};
 
 use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
@@ -58,6 +58,9 @@ fn main() -> ! {
         &mut pac.RESETS,
     );
 
+    let mut nshift_en = pins.gpio1.into_push_pull_output();
+    nshift_en.set_low().unwrap();
+
     let mut led1_pin = pins.gpio26.into_push_pull_output();
     let mut led2_pin = pins.gpio0.into_push_pull_output();
     led1_pin.set_high().unwrap();
@@ -90,38 +93,30 @@ fn main() -> ! {
     let mut r2_sdi = pins.gpio13.into_push_pull_output().into_dyn_pin();
     let mut g2_sdi = pins.gpio14.into_push_pull_output().into_dyn_pin();
     let mut b2_sdi = pins.gpio15.into_push_pull_output().into_dyn_pin();
-    // note schematic fuckery:
-    // G3 actually controls R3
-    // (R3 actually controls G3)
-    // B4 actually controls B3
-    // (B3 actually controls B4)
-    // G4 actually controls R4
-    // (R4 actually controls G4)
-    let mut r3_sdi = pins.gpio17.into_push_pull_output().into_dyn_pin();
-    let mut g3_sdi = pins.gpio16.into_push_pull_output().into_dyn_pin();
-    let mut b3_sdi = pins.gpio21.into_push_pull_output().into_dyn_pin();
-    let mut r4_sdi = pins.gpio20.into_push_pull_output().into_dyn_pin();
-    let mut g4_sdi = pins.gpio19.into_push_pull_output().into_dyn_pin();
-    let mut b4_sdi = pins.gpio18.into_push_pull_output().into_dyn_pin();
-    // (end schematic fuckery)
+    let mut r3_sdi = pins.gpio16.into_push_pull_output().into_dyn_pin();
+    let mut g3_sdi = pins.gpio17.into_push_pull_output().into_dyn_pin();
+    let mut b3_sdi = pins.gpio18.into_push_pull_output().into_dyn_pin();
+    let mut r4_sdi = pins.gpio19.into_push_pull_output().into_dyn_pin();
+    let mut g4_sdi = pins.gpio20.into_push_pull_output().into_dyn_pin();
+    let mut b4_sdi = pins.gpio21.into_push_pull_output().into_dyn_pin();
 
     // SR pin that needs to be low to work
     let mut sr = pins.gpio22.into_push_pull_output().into_dyn_pin();
-    sr.set_high().unwrap();
+    sr.set_low().unwrap();
 
     let sdis = PinGroup([
-        InvertedPin(PinRef(&mut r1_sdi)),
-        InvertedPin(PinRef(&mut r2_sdi)),
-        InvertedPin(PinRef(&mut r3_sdi)),
-        InvertedPin(PinRef(&mut r4_sdi)),
-        InvertedPin(PinRef(&mut g1_sdi)),
-        InvertedPin(PinRef(&mut g2_sdi)),
-        InvertedPin(PinRef(&mut g3_sdi)),
-        InvertedPin(PinRef(&mut g4_sdi)),
-        InvertedPin(PinRef(&mut b1_sdi)),
-        InvertedPin(PinRef(&mut b2_sdi)),
-        InvertedPin(PinRef(&mut b3_sdi)),
-        InvertedPin(PinRef(&mut b4_sdi)),
+        PinRef(&mut r1_sdi),
+        PinRef(&mut r2_sdi),
+        PinRef(&mut r3_sdi),
+        PinRef(&mut r4_sdi),
+        PinRef(&mut g1_sdi),
+        PinRef(&mut g2_sdi),
+        PinRef(&mut g3_sdi),
+        PinRef(&mut g4_sdi),
+        PinRef(&mut b1_sdi),
+        PinRef(&mut b2_sdi),
+        PinRef(&mut b3_sdi),
+        PinRef(&mut b4_sdi),
     ]);
 
     let config = Mbi5153Config {
@@ -134,39 +129,38 @@ fn main() -> ! {
 
     dmg1083::configure_panel(
         config,
-        InvertedPin(PinRef(&mut dclk)),
-        InvertedPin(PinRef(&mut latch)),
+        PinRef(&mut dclk),
+        PinRef(&mut latch),
         sdis,
     )
     .unwrap();
 
     dmg1083::configure_panel_2(
-        InvertedPin(PinRef(&mut dclk)),
-        InvertedPin(PinRef(&mut latch)),
+        PinRef(&mut dclk),
+        PinRef(&mut latch),
         Mbi5153Config2::appnote_secret_sauce_r(),
         PinGroup([
-            InvertedPin(PinRef(&mut r1_sdi)),
-            InvertedPin(PinRef(&mut r2_sdi)),
-            InvertedPin(PinRef(&mut r3_sdi)),
-            InvertedPin(PinRef(&mut r4_sdi)),
+            PinRef(&mut r1_sdi),
+            PinRef(&mut r2_sdi),
+            PinRef(&mut r3_sdi),
+            PinRef(&mut r4_sdi),
         ]),
         Mbi5153Config2::appnote_secret_sauce_gb(),
         PinGroup([
-            InvertedPin(PinRef(&mut g1_sdi)),
-            InvertedPin(PinRef(&mut g2_sdi)),
-            InvertedPin(PinRef(&mut g3_sdi)),
-            InvertedPin(PinRef(&mut g4_sdi)),
+            PinRef(&mut g1_sdi),
+            PinRef(&mut g2_sdi),
+            PinRef(&mut g3_sdi),
+            PinRef(&mut g4_sdi),
         ]),
         Mbi5153Config2::appnote_secret_sauce_gb(),
         PinGroup([
-            InvertedPin(PinRef(&mut b1_sdi)),
-            InvertedPin(PinRef(&mut b2_sdi)),
-            InvertedPin(PinRef(&mut b3_sdi)),
-            InvertedPin(PinRef(&mut b4_sdi)),
+            PinRef(&mut b1_sdi),
+            PinRef(&mut b2_sdi),
+            PinRef(&mut b3_sdi),
+            PinRef(&mut b4_sdi),
         ]),
     )
     .unwrap();
-    // rprintln!("[+] initialising software driver");
 
     let mut app = Dmg1083::new(
         dclk,

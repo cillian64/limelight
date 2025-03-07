@@ -4,7 +4,6 @@ use cortex_m::asm::nop;
 use dmg1083::{PanelData, ADDRESSES, IC_COUNT, OUTPUTS, SCAN_LINES};
 use embedded_hal::digital::v2::OutputPin;
 use mbi5153::PanelState;
-use misc_hacks::InvertedPin;
 use rp235x_hal::gpio::{DynPinId, DynPullType, FunctionSioOutput, Pin, PullType};
 use rp235x_hal::multicore::{Multicore, Stack};
 use rp235x_hal::pac::{PPB, PSM};
@@ -12,7 +11,6 @@ use rp235x_hal::sio::SioFifo;
 use rp235x_hal::{pac, Sio};
 
 type Outpin = Pin<DynPinId, FunctionSioOutput, DynPullType>;
-type OutpinI = InvertedPin<Outpin>;
 
 const CMD_STOP_GCLK: u32 = 0x42;
 const CMD_RESTART_GCLK: u32 = 0x43;
@@ -22,8 +20,8 @@ const RESP_ONLINE: u32 = 0x12;
 /// `Scanouter` has the address lines and grayscale clock line (GCLK).
 struct Scanouter {
     /// Addresses A through E.
-    addresses: [OutpinI; 5],
-    gclk: OutpinI,
+    addresses: [Outpin; 5],
+    gclk: Outpin,
     fifo: Option<SioFifo>,
     gclk_multiplier: bool,
 }
@@ -87,10 +85,10 @@ impl Scanouter {
 }
 
 pub struct Dmg1083 {
-    dclk: OutpinI,
-    le: OutpinI,
+    dclk: Outpin,
+    le: Outpin,
     /// SDI inputs for R/G/B, 1 through 4.
-    sdi_rgb: [OutpinI; OUTPUTS],
+    sdi_rgb: [Outpin; OUTPUTS],
     scanout: Option<Scanouter>,
     fifo: SioFifo,
 }
@@ -110,14 +108,14 @@ impl Dmg1083 {
     ) -> Self {
         let mut ret = Self {
             scanout: Some(Scanouter {
-                addresses: addresses.map(|x| InvertedPin(x.into_pull_type())),
-                gclk: InvertedPin(gclk.into_pull_type()),
+                addresses: addresses.map(|x| x.into_pull_type()),
+                gclk: gclk.into_pull_type(),
                 fifo: None,
                 gclk_multiplier,
             }),
-            dclk: InvertedPin(dclk.into_pull_type()),
-            le: InvertedPin(latch.into_pull_type()),
-            sdi_rgb: outputs.map(|x| InvertedPin(x.into_pull_type())),
+            dclk: dclk.into_pull_type(),
+            le: latch.into_pull_type(),
+            sdi_rgb: outputs.map(|x| x.into_pull_type()),
             fifo,
         };
         ret.spawn_second_core(psm, ppb);
