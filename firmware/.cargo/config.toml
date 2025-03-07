@@ -49,7 +49,10 @@ rustflags = [
 # Use picotool for loading.
 #
 # Load an elf, skipping unchanged flash sectors, verify it, and execute it
-runner = "picotool load -u -v -x -t elf"
+# runner = "picotool load -u -v -x -t elf"
+
+# probe-rs runner:
+runner = 'probe-rs run --chip rp235x'
 
 # This is the soft-float ABI for Arm mode.
 #
